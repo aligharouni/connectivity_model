@@ -6,7 +6,7 @@
 #> Differences:
 start_time <- Sys.time()
 test <- TRUE ## this is a test run
-saveit <- FALSE ## save the sample?
+saveit <- TRUE ## save the sample?
 
 # Time difference of 1.000327 mins
 # setwd("/home/ag/projects/connectivity/")
@@ -15,8 +15,8 @@ saveit <- FALSE ## save the sample?
 ## packages installment
 ## used in sum_fx.r for "graphAM" object
 if (!require("BiocManager", quietly = TRUE))  install.packages("BiocManager")
-# BiocManager::install("Rgraphviz", dependencies=TRUE)
-# BiocManager::install("RBGL")
+BiocManager::install("Rgraphviz", dependencies=TRUE)
+BiocManager::install("RBGL")
 
 pkgs <- c("dplyr","tidyverse","ggplot2", "purrr","broom", "reader",
           "deSolve","parallel",
@@ -34,22 +34,37 @@ install.lib <- pkgs[!pkgs %in% installed.packages()]
 for(lib in install.lib) install.packages(lib,dependencies=TRUE)
 vapply(pkgs, library, logical(1L),character.only = TRUE, logical.return = TRUE)
 
-ncores <- detectCores()-1 ## to be used in parallel computing function such as  mclapply (careful not to use up all cores!)
+ncores <- detectCores()-2 ## to be used in parallel computing function such as  mclapply (careful not to use up all cores!)
 
 ## multicore computation in Windows and Linux systems:
 # future::plan(multicore, workers = ncores)
 library(magrittr)
 plan(multisession, workers = ncores)
+
+## test igraph
+mat <- matrix(0, 3, 3)
+diag(mat) <- 0  # no self-loops
+
+# Create a graphAM object
+g <- new("graphAM", adjMat = mat, edgemode = "directed")
+print(g)
+
+g2 <- graph_from_adjacency_matrix(mat, mode = "directed")
+
 ## My functions: -----------------------------------------------------------  
 here::here()
 source(here::here("scripts", "fun_con.R"))
 
 ## Use Fipex functions: --------------------------------------------------------
 # fipexpath <- "~/projects/DCI-R-Code-2020/2021 Debug/" ## AG's Linux machine
+
+## clone the forked DCI machinery: git clone git@github.com:aligharouni/DCI-R-Code-2020.git
+## go to the directory that you cloned DCI-R-Code-2020 package
 fipexpath <- "C:/Ali/projects/DCI-R-Code-2020/2021 Debug/" ## AG's Windows Machine
 source(paste0(fipexpath,"get_adj_matrix_from_gis_AG.r"))
 source(paste0(fipexpath,"sum_fx.r"))
 source(paste0(fipexpath,"dci_calc_fx_AG.r")) ## for getting dci_p and dci_s
+
 
 # ##############################################################################
 # Simulation Inputs
@@ -57,7 +72,7 @@ source(here::here("scripts","netwSimInputs.R"))
 
 ## Simulation control parameters:
 ssize <- 60 ## sample size integer old was 60
-nodeRange <-  c(21,22,23,24,26,27,28,29)#c(25,30,35,40) #c(11:20), #c(3:10) #c(45,50) ## 
+nodeRange <-  c(3:10) #c(21,22,23,24,26,27,28,29) #c(25,30,35,40) #c(3:10) #c(11:20),  #c(45,50) ## 
 ## 3,7,15 are compelete binary graphs c(3:17)
 treetypeRange <- as.list(c("linear","binary"))
 ## Is the network directed? If FALSE, it is assumed the passability up=down which gives a symmetric c_ij for the metapopulation cum pass matrix
@@ -67,15 +82,17 @@ Dispersal <- c("Short","Long") ## readline(prompt="Enter the dispersal type Shor
 AllLengths <- "random" ## "unfixed":  for random lengths of reaches
 
 ## filename to save samp.l in ############################
-## phase 0; tests.
-# fname <- "./samp_test28Jan2024.RData"
-# fname <- "./samp3_30.RData"
+## Note that these sample files can be really large and depends on your RAM and cpu could take a long time. The way around it, is to split sampling based on the network size.
 
-## fname0: this splits to 2 files: 
-#> fnameini (which holds the unprocessed sample, for future reproducability), and
-#> fname, which holds the processed data corresponding to fnameini
+fname0 <- "samp3_10" #"samp20_30"#"samp3"#"samp45_50" #"samp25_40" #"samp11_20" ## 
 
-fname0 <- "samp20_30"#"samp3"#"samp45_50" #"samp25_40" #"samp11_20" ##"samp3_10" 
+# Define the desired folder path
+data_path <- here("data")
+
+# Check if it exists, and create it if it doesn't
+if (!dir.exists(data_path)) {
+  dir.create(data_path, recursive = FALSE)
+}
 
 makefname<-function(fname0, test=TRUE){
   fnameini<-here::here("data",paste0(if(test)"test_",fname0,"_ini.Rdata")) ## initial sample
