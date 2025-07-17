@@ -1,0 +1,11 @@
+*_cache/
+*_files/
+*~
+.Rhistory
+
+Rplots.pdf
+\#*
+.#*
+*.Rout
+*.Rlog
+*.Rout.args
